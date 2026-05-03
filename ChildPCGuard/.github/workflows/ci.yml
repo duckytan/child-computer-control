@@ -10,6 +10,10 @@ jobs:
   build:
     runs-on: windows-latest
 
+    defaults:
+      run:
+        working-directory: ChildPCGuard
+
     steps:
     - uses: actions/checkout@v4
 
@@ -19,20 +23,20 @@ jobs:
         dotnet-version: '8.0'
 
     - name: Restore dependencies
-      run: dotnet restore ChildPCGuard/ChildPCGuard.sln
+      run: dotnet restore ChildPCGuard.sln
 
     - name: Build
-      run: dotnet build ChildPCGuard/ChildPCGuard.sln --no-restore
+      run: dotnet build ChildPCGuard.sln --no-restore
 
     - name: Test
-      run: dotnet test ChildPCGuard/ChildPCGuard.sln --verbosity normal
+      run: dotnet test ChildPCGuard.sln --no-build --verbosity normal
 
     - name: Publish Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       run: |
-        dotnet publish ChildPCGuard/src/ChildPCGuard.GuardService/ChildPCGuard.GuardService.csproj -c Release -o publish/GuardService
-        dotnet publish ChildPCGuard/src/ChildPCGuard.Agent/ChildPCGuard.Agent.csproj -c Release -o publish/Agent
-        dotnet publish ChildPCGuard/src/ChildPCGuard.LockOverlay/ChildPCGuard.LockOverlay.csproj -c Release -o publish/LockOverlay
+        dotnet publish src/ChildPCGuard.GuardService/ChildPCGuard.GuardService.csproj -c Release -o ../publish/GuardService --no-build
+        dotnet publish src/ChildPCGuard.Agent/ChildPCGuard.Agent.csproj -c Release -o ../publish/Agent --no-build
+        dotnet publish src/ChildPCGuard.LockOverlay/ChildPCGuard.LockOverlay.csproj -c Release -o ../publish/LockOverlay --no-build
 
     - name: Upload Artifacts
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
