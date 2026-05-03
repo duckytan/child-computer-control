@@ -1,4 +1,5 @@
 using System;
+using ChildPCGuard.Shared;
 
 namespace ChildPCGuard.GuardService
 {

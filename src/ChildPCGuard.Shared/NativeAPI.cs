@@ -244,6 +244,7 @@ namespace ChildPCGuard.Shared
         public const int VK_CONTROL = 0x11;
         public const int VK_SHIFT = 0x10;
         public const int VK_ALT = 0x12;
+        public const int VK_F12 = 0x7B;
 
         public const int SM_CLEANBOOT = 67;
 

@@ -13,4 +13,8 @@
     <ProjectReference Include="..\ChildPCGuard.Shared\ChildPCGuard.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="System.Diagnostics.EventLog" Version="8.0.1" />
+  </ItemGroup>
+
 </Project>

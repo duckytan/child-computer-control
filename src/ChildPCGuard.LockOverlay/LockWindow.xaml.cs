@@ -15,7 +15,7 @@ namespace ChildPCGuard.LockOverlay
     public partial class LockWindow : Window
     {
         private readonly LockReason _lockReason;
-        private readonly DispatcherTimer _countdownTimer;
+        private DispatcherTimer _countdownTimer;
         private DateTime _restEndTime;
         private int _errorCount;
         private DateTime _lockUntil;
@@ -108,9 +108,9 @@ namespace ChildPCGuard.LockOverlay
             {
                 int vkCode = Marshal.ReadInt32(lParam);
 
-                bool isCtrl = GetAsyncKeyState(NativeAPI.VK_LCONTROL) < 0 || GetAsyncKeyState(NativeAPI.VK_RCONTROL) < 0;
-                bool isAlt = GetAsyncKeyState(NativeAPI.VK_LALT) < 0 || GetAsyncKeyState(NativeAPI.VK_RALT) < 0;
-                bool isShift = GetAsyncKeyState(NativeAPI.VK_LSHIFT) < 0 || GetAsyncKeyState(NativeAPI.VK_RSHIFT) < 0;
+                bool isCtrl = NativeAPI.GetAsyncKeyState(NativeAPI.VK_LCONTROL) < 0 || NativeAPI.GetAsyncKeyState(NativeAPI.VK_RCONTROL) < 0;
+                bool isAlt = NativeAPI.GetAsyncKeyState(NativeAPI.VK_LALT) < 0 || NativeAPI.GetAsyncKeyState(NativeAPI.VK_RALT) < 0;
+                bool isShift = NativeAPI.GetAsyncKeyState(NativeAPI.VK_LSHIFT) < 0 || NativeAPI.GetAsyncKeyState(NativeAPI.VK_RSHIFT) < 0;
 
                 if (isCtrl && isAlt && isShift && vkCode == NativeAPI.VK_F12)
                 {
@@ -288,7 +288,9 @@ namespace ChildPCGuard.LockOverlay
 
                     if (result == MessageBoxResult.Yes)
                     {
-                        EventLog.WriteEntry("Emergency unlock triggered.", EventLogEntryType.Warning);
+                        using var eventLog = new EventLog("Application");
+                        eventLog.Source = "ChildPCGuard.LockOverlay";
+                        eventLog.WriteEntry("Emergency unlock triggered.", EventLogEntryType.Warning);
                         Unlock();
                     }
                 });

@@ -10,9 +10,9 @@ namespace ChildPCGuard.GuardService
 {
     public partial class GuardService : ServiceBase
     {
-        private Timer _monitoringTimer;
-        private Timer _shutdownCheckTimer;
-        private Timer _ntpCheckTimer;
+        private System.Threading.Timer _monitoringTimer;
+        private System.Threading.Timer _shutdownCheckTimer;
+        private System.Threading.Timer _ntpCheckTimer;
         private CancellationTokenSource _cts;
         private FileSystemWatcher _configWatcher;
 

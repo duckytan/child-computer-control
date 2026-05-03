@@ -17,7 +17,6 @@ namespace ChildPCGuard.Agent
         private Process? _partnerProcess;
         private Timer? _heartbeatTimer;
         private Timer? _partnerCheckTimer;
-        private bool _isRunning;
 
         public Agent(string agentName, string partnerName)
         {
@@ -27,7 +26,6 @@ namespace ChildPCGuard.Agent
 
         public void Start()
         {
-            _isRunning = true;
 
             StartPartnerProcess();
 
@@ -114,7 +112,6 @@ namespace ChildPCGuard.Agent
 
         public void Stop()
         {
-            _isRunning = false;
             _heartbeatTimer?.Dispose();
             _partnerCheckTimer?.Dispose();
             _partnerProcess?.Kill();
