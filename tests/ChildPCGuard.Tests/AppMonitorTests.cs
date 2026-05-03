@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using ChildPCGuard.Shared;
+using ChildPCGuard.GuardService;
 using Xunit;
 
 namespace ChildPCGuard.Tests

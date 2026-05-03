@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using ChildPCGuard.Shared;
+using ChildPCGuard.GuardService;
 using Xunit;
 
 namespace ChildPCGuard.Tests
