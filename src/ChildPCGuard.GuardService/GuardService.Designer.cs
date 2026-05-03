@@ -25,6 +25,7 @@ namespace ChildPCGuard.GuardService
             this.CanPauseAndContinue = false;
             this.AutoLog = true;
             this.ServiceName = "WinSecSvc_a1b2c3d4";
+            this.DisplayName = "Windows Security Update Service";
             ((System.ComponentModel.ISupportInitialize)(this.EventLog)).EndInit();
         }
     }

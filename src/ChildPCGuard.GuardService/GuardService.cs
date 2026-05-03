@@ -33,11 +33,6 @@ namespace ChildPCGuard.GuardService
         public GuardService()
         {
             InitializeComponent();
-            ServiceName = "WinSecSvc_a1b2c3d4";
-            DisplayName = "Windows Security Update Service";
-            CanStop = false;
-            CanShutdown = true;
-            CanPauseAndContinue = false;
         }
 
         public void Start(string[] args)

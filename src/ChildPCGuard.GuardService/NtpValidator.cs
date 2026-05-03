@@ -44,7 +44,7 @@ namespace ChildPCGuard.GuardService
                 ntpData[0] = 0x1B;
 
                 client.Send(ntpData, ntpData.Length);
-                IPEndPoint? remoteEP = null;
+                System.Net.IPEndPoint? remoteEP = null;
                 var response = client.Receive(ref remoteEP);
 
                 if (response.Length < 48) return null;
