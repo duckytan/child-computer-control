@@ -78,150 +78,150 @@ ChildPCGuard/
 
 ## 阶段二：代码开发
 
-- [ ] 7. 创建解决方案和项目结构
+- [x] 7. 创建解决方案和项目结构
    - 创建 ChildPCGuard.sln
    - 创建 src/ 目录下的四个项目
    - 配置项目引用关系：Shared 被 Service/Agent/LockOverlay 引用
 
-- [ ] 8. 实现共享库 (ChildPCGuard.Shared)
-   - [ ] 8.1 实现 NativeAPI.cs
+- [x] 8. 实现共享库 (ChildPCGuard.Shared)
+   - [x] 8.1 实现 NativeAPI.cs
      - 声明 User32.dll 和 Kernel32.dll 的 P/Invoke 方法
      - 定义 LASTINPUTINFO, STARTUPINFO, PROCESS_INFORMATION 等结构体
      - 定义桌面操作、进程操作、系统关闭等相关常量
 
-   - [ ] 8.2 实现 PipeMessages.cs
+   - [x] 8.2 实现 PipeMessages.cs
      - 定义 PipeMessageType 枚举（Heartbeat, LockRequest, UnlockRequest等）
      - 实现 PipeMessage, HeartbeatMessage, StatusMessage 消息类
 
-   - [ ] 8.3 实现 Models.cs
+   - [x] 8.3 实现 Models.cs
      - 实现 AppConfiguration 配置类（含RulesConfiguration, TimeRule, TimeWindow）
      - 实现 DailyUsageData, ProcessUsageLog, WebUsageLog 等数据类
      - 定义 UsageState, LockReason 枚举
 
-   - [ ] 8.4 实现 AesEncryption.cs
+   - [x] 8.4 实现 AesEncryption.cs
      - 实现 Encrypt/Decrypt 对称加密方法
      - 实现 GenerateKey 密钥生成
 
-   - [ ]* 8.5 为共享库编写单元测试
+   - [x] 8.5 为共享库编写单元测试
      - 为 AesEncryption 加密/解密编写测试
      - 为 PipeMessage 序列化/反序列化编写测试
      - 为 Models 数据模型验证编写测试
 
-- [ ] 9. 实现 Windows服务 (ChildPCGuard.GuardService)
-   - [ ] 9.1 实现 ConfigManager.cs
+- [x] 9. 实现 Windows服务 (ChildPCGuard.GuardService)
+   - [x] 9.1 实现 ConfigManager.cs
      - 从 C:\ProgramData\ChildPCGuard\config.json 加载/保存配置
      - 实现配置验证和加密存储
 
-   - [ ] 9.2 实现 NamedPipeServer.cs
+   - [x] 9.2 实现 NamedPipeServer.cs
      - 实现命名管道服务器，接受 Agent 的连接
      - 处理 PipeMessage 并触发相应回调
 
-   - [ ] 9.3 实现 TimeTracker.cs
+   - [x] 9.3 实现 TimeTracker.cs
      - 使用 GetLastInputInfo Win32 API 跟踪用户实际使用时间
      - 实现 GetState() 返回当前 UsageState 和剩余时间
      - 实现 StartRest/EndRest/ResetDaily 方法
      - 支持工作日/周末不同规则
 
-   - [ ]* 9.3.1 为 TimeTracker 编写单元测试
+   - [x] 9.3.1 为 TimeTracker 编写单元测试
      - 测试 GetState 返回正确的 UsageState
      - 测试 IsDailyLimitReached 边界条件
      - 测试工作日/周末规则切换
 
-   - [ ] 9.4 实现 ProcessGuardian.cs
+   - [x] 9.4 实现 ProcessGuardian.cs
      - 启动并管理 AgentA (svchost伪装) 和 AgentB (RuntimeBroker伪装)
      - 监控心跳超时，超时则重启对应 Agent
      - 实现 RestartAgent 方法
 
-   - [ ] 9.5 实现 AppMonitor.cs
+   - [x] 9.5 实现 AppMonitor.cs
      - 获取前台窗口进程信息
      - 检查黑名单程序是否运行
      - 记录进程使用日志到 logs/YYYY-MM-DD_process.json
 
-   - [ ] 9.6 实现 WebMonitor.cs
+   - [x] 9.6 实现 WebMonitor.cs
      - 读取 Chrome/Edge/Firefox 浏览器历史记录
      - 检查黑名单网站访问
      - 记录网站访问日志到 logs/YYYY-MM-DD_web.json
 
-   - [ ] 9.7 实现 ShutdownScheduler.cs
+   - [x] 9.7 实现 ShutdownScheduler.cs
      - 检查是否到达定时关机时间
      - 在关机前显示60秒警告通知
 
-   - [ ] 9.8 实现 NtpValidator.cs
+   - [x] 9.8 实现 NtpValidator.cs
      - 通过 NTP 服务器验证系统时间
      - 检测时间篡改行为
 
-   - [ ] 9.9 实现 NotificationHelper.cs
+   - [x] 9.9 实现 NotificationHelper.cs
      - 显示警告通知（剩余时间提醒）
 
-   - [ ] 9.10 实现 GuardService.cs (主服务)
+   - [x] 9.10 实现 GuardService.cs (主服务)
      - 实现 ServiceBase 派生类的 OnStart/OnStop/OnShutdown
      - 初始化所有组件并启动定时器
      - 实现 TriggerLockScreen 和 TriggerShutdown 方法
      - 处理管道消息分发
 
-   - [ ] 9.11 实现 Program.cs
+   - [x] 9.11 实现 Program.cs
      - 支持 --console 参数以控制台模式运行（用于调试）
      - 支持 --install/--uninstall 服务安装/卸载
 
-   - [ ]* 9.12 为 GuardService 编写集成测试
+   - [x] 9.12 为 GuardService 编写集成测试
      - 测试服务启动和停止流程
      - 测试 TriggerLockScreen 调用
      - 测试配置变更后服务响应
 
-- [ ] 10. 实现守护进程 (ChildPCGuard.Agent)
-   - [ ] 10.1 实现 Agent.cs
+- [x] 10. 实现守护进程 (ChildPCGuard.Agent)
+   - [x] 10.1 实现 Agent.cs
      - 实现与配对进程的互相监控
      - 通过命名管道向 Service 发送心跳
      - 检测到配对进程死亡时通知 Service 重启
 
-   - [ ] 10.2 实现 Program.cs
+   - [x] 10.2 实现 Program.cs
      - 支持 --agent-a 和 --agent-b 参数启动不同角色
      - 无窗口、无托盘，静默运行
 
-   - [ ]* 10.3 为 Agent 编写单元测试
+   - [x] 10.3 为 Agent 编写单元测试
      - 测试心跳发送逻辑
      - 测试配对进程死亡检测
      - 测试命令行参数解析
 
-- [ ] 11. 实现锁屏界面 (ChildPCGuard.LockOverlay)
-   - [ ] 11.1 实现 LockWindow.xaml
+- [x] 11. 实现锁屏界面 (ChildPCGuard.LockOverlay)
+   - [x] 11.1 实现 LockWindow.xaml
      - 全屏显示锁屏界面
      - 显示剩余时间/锁屏原因
      - 密码输入框（密码错误显示提示）
      - 紧急解锁快捷键提示（Ctrl+Alt+Shift+F12）
 
-   - [ ] 11.2 实现 LockWindow.xaml.cs
+   - [x] 11.2 实现 LockWindow.xaml.cs
      - 使用 CreateDesktop/SwitchDesktop 创建自定义桌面
      - 验证解锁密码（通过命名管道询问 Service）
      - 5分钟内3次密码错误锁定5分钟
      - 实现紧急解锁功能
 
-   - [ ]* 11.3 为 LockOverlay 编写单元测试
+   - [x] 11.3 为 LockOverlay 编写单元测试
      - 测试密码验证逻辑
      - 测试错误计数锁定逻辑
      - 测试紧急解锁快捷键检测
 
-- [ ] 12. 创建项目文件和配置
-   - [ ] 12.1 创建 ChildPCGuard.Shared.csproj
+- [x] 12. 创建项目文件和配置
+   - [x] 12.1 创建 ChildPCGuard.Shared.csproj
      - 配置 .NET 8, 类库项目
 
-   - [ ] 12.2 创建 ChildPCGuard.GuardService.csproj
+   - [x] 12.2 创建 ChildPCGuard.GuardService.csproj
      - 配置 .NET 8, Windows Service 项目
      - 引用 Shared 项目
 
-   - [ ] 12.3 创建 ChildPCGuard.Agent.csproj
+   - [x] 12.3 创建 ChildPCGuard.Agent.csproj
      - 配置 .NET 8, 控制台应用
      - 引用 Shared 项目
 
-   - [ ] 12.4 创建 ChildPCGuard.LockOverlay.csproj
+   - [x] 12.4 创建 ChildPCGuard.LockOverlay.csproj
      - 配置 .NET 8, WPF 应用
      - 引用 Shared 项目
 
-   - [ ] 12.5 创建 ChildPCGuard.sln
+   - [x] 12.5 创建 ChildPCGuard.sln
      - 添加所有项目引用
 
-- [ ] 13. 实现安装脚本
-   - [ ] 13.1 实现 install.ps1
+- [x] 13. 实现安装脚本
+   - [x] 13.1 实现 install.ps1
      - 检查管理员权限
      - 创建 C:\ProgramData\ChildPCGuard 目录
      - 复制文件到 System32（使用伪装文件名）
@@ -229,7 +229,7 @@ ChildPCGuard/
      - 注册 Windows 服务
      - 设置服务失败后自动重启
 
-   - [ ] 13.2 实现 uninstall.ps1
+   - [x] 13.2 实现 uninstall.ps1
      - 验证管理员权限和密码
      - 停止并删除服务
      - 删除伪装文件和安装目录
