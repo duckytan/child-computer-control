@@ -13,7 +13,7 @@ namespace ChildPCGuard.GuardService
         private readonly AppConfiguration _config;
         private readonly Dictionary<string, DateTime> _lastHeartbeat = new Dictionary<string, DateTime>();
         private readonly Dictionary<string, Process> _agentProcesses = new Dictionary<string, Process>();
-        private Timer _heartbeatCheckTimer;
+        private System.Threading.Timer _heartbeatCheckTimer;
         private bool _isRunning;
 
         private readonly string[] _agentPaths = new string[]
