@@ -32,9 +32,11 @@ jobs:
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       continue-on-error: true
       run: |
-        dotnet publish src/ChildPCGuard.GuardService/ChildPCGuard.GuardService.csproj -c Release -o publish/GuardService --no-build
-        dotnet publish src/ChildPCGuard.Agent/ChildPCGuard.Agent.csproj -c Release -o publish/Agent --no-build
-        dotnet publish src/ChildPCGuard.LockOverlay/ChildPCGuard.LockOverlay.csproj -c Release -o publish/LockOverlay --no-build
+        dotnet publish src/ChildPCGuard.GuardService/ChildPCGuard.GuardService.csproj -c Release -o publish/Release --no-build
+        dotnet publish src/ChildPCGuard.Agent/ChildPCGuard.Agent.csproj -c Release -o publish/Release --no-build
+        dotnet publish src/ChildPCGuard.LockOverlay/ChildPCGuard.LockOverlay.csproj -c Release -o publish/Release --no-build
+        copy scripts\启动.bat publish\Release\
+        copy scripts\停止.bat publish\Release\
 
     - name: Upload Artifacts
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
