@@ -20,8 +20,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ChildPCGuard.Shared\ChildPCGuard.Shared.csproj" />
-    <ProjectReference Include="..\..\src\ChildPCGuard.GuardService\ChildPCGuard.GuardService.csproj" />
-    <ProjectReference Include="..\..\src\ChildPCGuard.Agent\ChildPCGuard.Agent.csproj" />
   </ItemGroup>
 
 </Project>
