@@ -46,7 +46,7 @@
 
 ```bash
 git clone https://github.com/duckytan/child-computer-control.git
-cd child-computer-control/ChildPCGuard
+cd child-computer-control
 dotnet restore
 dotnet build
 ```
@@ -54,15 +54,13 @@ dotnet build
 ### 安装
 
 ```powershell
-cd scripts
-.\install.ps1 -Password "your_admin_password"
+.\scripts\install.ps1 -Password "your_admin_password"
 ```
 
 ### 卸载
 
 ```powershell
-cd scripts
-.\uninstall.ps1 -Password "your_admin_password"
+.\scripts\uninstall.ps1 -Password "your_admin_password"
 ```
 
 ## 配置说明

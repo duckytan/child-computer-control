@@ -82,10 +82,8 @@
 # C/C++/Go/Rust
 *.o
 *.obj
-*.exe
 *.out
 *.app
-*.dll
 *.dylib
 *.so
 *.test
@@ -99,6 +97,63 @@
 **/.bundle/
 **/vendor/bundle
 **/.byebug_history
+
+# .NET
+**/[Bb]in/
+**/[Oo]bj/
+**/[Ll]og/
+**/[Ll]ogs/
+**/[Dd]ebugPublic/
+**/[Rr]eleases/
+**/x64/
+**/x86/
+**/[Aa][Rr][Mm]/
+**/[Aa][Rr][Mm]64/
+**/bld/
+**/[Bb]uildLog/
+**/[Bb]uilds/
+**/[Dd]rops/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.sln.DotSettings.user
+*.csproj.DotSettings
+*.nupkg
+*.snupkg
+*.nuget.props
+*.nuget.targets
+**/[Tt]est[Rr]esult*/
+**/[Bb]uild[Ll]og.*
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.lib
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp_proj
+*_wpftmp.csproj
+*.tlog
+*.vspscc
+*.vssscc
+*.builds
+*.pidb
+*.svclog
+*.scc
+*.dll
+**/Logs/
+*.exe
 
 # Logs
 *.log
@@ -174,3 +229,8 @@
 *.lz
 *.lzma
 *.iso
+
+# ChildPCGuard specific
+output/
+publish/
+ChildPCGuard.zip
