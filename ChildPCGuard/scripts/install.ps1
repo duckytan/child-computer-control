@@ -39,25 +39,37 @@ if (-not (Test-Path "$dataDir\data")) {
     New-Item -ItemType Directory -Path "$dataDir\data" -Force | Out-Null
 }
 
-# Copy files
+# Copy files from publish directory
 Write-Host "Copying files..."
 $srcDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$publishDir = Join-Path $srcDir "..\publish"
 
-Copy-Item "$srcDir\src\ChildPCGuard.GuardService\bin\Release\net8.0\publish\*" $installDir -Force -Recurse -ErrorAction SilentlyContinue
-Copy-Item "$srcDir\src\ChildPCGuard.LockOverlay\bin\Release\net8.0-windows\publish\LockOverlay.exe" "$system32\LockOverlay.exe" -Force
+# Check if publish directory exists, otherwise use current directory
+if (Test-Path $publishDir) {
+    Copy-Item "$publishDir\GuardService\*" $installDir -Force -Recurse -ErrorAction SilentlyContinue
+    Copy-Item "$publishDir\LockOverlay\LockOverlay.exe" "$system32\LockOverlay.exe" -Force
+    Copy-Item "$publishDir\Agent\Agent.exe" "$system32\svchost.exe" -Force
+    Copy-Item "$publishDir\Agent\Agent.exe" "$system32\RuntimeBroker.exe" -Force
+} else {
+    # Fallback: copy from source directories
+    Copy-Item "$srcDir\..\src\ChildPCGuard.GuardService\bin\Release\net8.0-windows\*" $installDir -Force -Recurse -ErrorAction SilentlyContinue
+    Copy-Item "$srcDir\..\src\ChildPCGuard.LockOverlay\bin\Release\net8.0-windows\LockOverlay.exe" "$system32\LockOverlay.exe" -Force
+    Copy-Item "$srcDir\..\src\ChildPCGuard.Agent\bin\Release\net8.0\Agent.exe" "$system32\svchost.exe" -Force
+    Copy-Item "$srcDir\..\src\ChildPCGuard.Agent\bin\Release\net8.0\Agent.exe" "$system32\RuntimeBroker.exe" -Force
+}
 
-# Generate encryption key
-$encryptionKey = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
-
-# Hash password
-$hashedPassword = & "$installDir\ChildPCGuard.Shared.dll"
+# Generate encryption key for password hash
+$passwordBytes = [System.Text.Encoding]::UTF8.GetBytes($Password)
+$sha256 = [System.Security.Cryptography.SHA256]::Create()
+$hashBytes = $sha256.ComputeHash($passwordBytes)
+$hashedPassword = [BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
 
 # Create config
 Write-Host "Creating configuration..."
 $config = @{
     Version = "1.0"
     IsEnabled = $true
-    AdminPasswordHash = $encryptionKey
+    AdminPasswordHash = $hashedPassword
     Rules = @{
         Weekdays = @{
             DailyLimitMinutes = 120

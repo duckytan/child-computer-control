@@ -1,0 +1,33 @@
+{
+    "Version": "1.0",
+    "IsEnabled": true,
+    "AdminPasswordHash": "",
+    "Rules": {
+        "Weekdays": {
+            "DailyLimitMinutes": 120,
+            "AllowedTimeWindows": [
+                { "Start": "15:00", "End": "20:00" }
+            ]
+        },
+        "Weekends": {
+            "DailyLimitMinutes": 240,
+            "AllowedTimeWindows": [
+                { "Start": "09:00", "End": "21:00" }
+            ]
+        }
+    },
+    "AutoShutdownTime": "22:00",
+    "WarningMinutes": [10, 5, 1],
+    "IdleThresholdMs": 5000,
+    "ContinuousLimitMinutes": 45,
+    "RestDurationMinutes": 5,
+    "BlockedApps": [],
+    "BlockedSites": [],
+    "UseNtpValidation": true,
+    "NtpServers": ["pool.ntp.org", "time.windows.com", "ntp.aliyun.com"],
+    "NtpToleranceMinutes": 5,
+    "ServiceName": "WinSecSvc_a1b2c3d4",
+    "ServiceDisplayName": "Windows Security Update Service",
+    "LockScreenMessage": "今天的使用时间已到，休息一下吧！",
+    "EmergencyUnlockShortcut": "Ctrl+Alt+Shift+F12"
+}

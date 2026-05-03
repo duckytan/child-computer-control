@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore ChildPCGuard/ChildPCGuard.sln
+
+    - name: Build
+      run: dotnet build ChildPCGuard/ChildPCGuard.sln --no-restore
+
+    - name: Test
+      run: dotnet test ChildPCGuard/ChildPCGuard.sln --no-build --verbosity normal --collect:"XPlat Code Coverage"
+
+    - name: Publish Release
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      run: |
+        dotnet publish ChildPCGuard/src/ChildPCGuard.GuardService/ChildPCGuard.GuardService.csproj -c Release -o publish/GuardService
+        dotnet publish ChildPCGuard/src/ChildPCGuard.Agent/ChildPCGuard.Agent.csproj -c Release -o publish/Agent
+        dotnet publish ChildPCGuard/src/ChildPCGuard.LockOverlay/ChildPCGuard.LockOverlay.csproj -c Release -o publish/LockOverlay
+
+    - name: Upload Artifacts
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ChildPCGuard-Release
+        path: publish/
+        retention-days: 30
