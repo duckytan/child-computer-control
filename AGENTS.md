@@ -1,5 +1,9 @@
 # AGENTS.md
 
+## 自动推送规则
+
+**每次完成文件修改后，必须将更改提交并推送到 GitHub。**
+
 ## Repo Structure
 
 - `.monkeycode/specs/child-pc-guard/tasklist.md` — Implementation plan with 3 phases

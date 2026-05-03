@@ -67,15 +67,15 @@ namespace ChildPCGuard.GuardService
                 _configWatcher.Changed += OnConfigChanged;
                 _configWatcher.EnableRaisingEvents = true;
 
-                _monitoringTimer = new Timer(MonitoringCallback, null,
+                _monitoringTimer = new System.Threading.Timer(MonitoringCallback, null,
                     TimeSpan.FromSeconds(5),
                     TimeSpan.FromSeconds(5));
 
-                _shutdownCheckTimer = new Timer(ShutdownCheckCallback, null,
+                _shutdownCheckTimer = new System.Threading.Timer(ShutdownCheckCallback, null,
                     TimeSpan.FromSeconds(30),
                     TimeSpan.FromSeconds(30));
 
-                _ntpCheckTimer = new Timer(NtpCheckCallback, null,
+                _ntpCheckTimer = new System.Threading.Timer(NtpCheckCallback, null,
                     TimeSpan.Zero,
                     TimeSpan.FromMinutes(5));
 
@@ -83,11 +83,11 @@ namespace ChildPCGuard.GuardService
 
                 CheckSafeMode();
 
-                EventLog.WriteEntry($"ChildPCGuard Service started successfully. Config loaded.", EventLogEntryType.Information);
+                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"ChildPCGuard Service started successfully. Config loaded.", EventLogEntryType.Information);
             }
             catch (Exception ex)
             {
-                EventLog.WriteEntry($"ChildPCGuard Service failed to start: {ex}", EventLogEntryType.Error);
+                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"ChildPCGuard Service failed to start: {ex}", EventLogEntryType.Error);
                 throw;
             }
         }
@@ -106,7 +106,7 @@ namespace ChildPCGuard.GuardService
             _ntpCheckTimer?.Dispose();
             _pipeServer?.Stop();
             _processGuardian?.Stop();
-            EventLog.WriteEntry("ChildPCGuard Service stopped.", EventLogEntryType.Information);
+            System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", "ChildPCGuard Service stopped.", EventLogEntryType.Information);
         }
 
         protected override void OnShutdown()
@@ -129,7 +129,7 @@ namespace ChildPCGuard.GuardService
             int bootType = NativeAPI.GetSystemMetrics(NativeAPI.SM_CLEANBOOT);
             if (bootType != 0)
             {
-                EventLog.WriteEntry("Safe mode detected! Initiating shutdown.", EventLogEntryType.Warning);
+                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", "Safe mode detected! Initiating shutdown.", EventLogEntryType.Warning);
                 TriggerImmediateShutdown();
             }
         }
@@ -183,7 +183,7 @@ namespace ChildPCGuard.GuardService
             }
             catch (Exception ex)
             {
-                EventLog.WriteEntry($"Monitoring error: {ex.Message}", EventLogEntryType.Warning);
+                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Monitoring error: {ex.Message}", EventLogEntryType.Warning);
             }
         }
 
@@ -217,7 +217,7 @@ namespace ChildPCGuard.GuardService
                             }
                             catch (Exception ex)
                             {
-                                EventLog.WriteEntry($"Shutdown execution error: {ex.Message}", EventLogEntryType.Error);
+                                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Shutdown execution error: {ex.Message}", EventLogEntryType.Error);
                             }
                         }, TaskContinuationOptions.OnlyOnRanToCompletion);
                     }
@@ -225,7 +225,7 @@ namespace ChildPCGuard.GuardService
             }
             catch (Exception ex)
             {
-                EventLog.WriteEntry($"Shutdown check error: {ex.Message}", EventLogEntryType.Warning);
+                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Shutdown check error: {ex.Message}", EventLogEntryType.Warning);
             }
         }
 
@@ -240,23 +240,23 @@ namespace ChildPCGuard.GuardService
 
                     if (_ntpValidator.ValidateTime())
                     {
-                        _timeTracker.UpdateNtpTime(_ntpValidator.GetCurrentNtpTime());
+                        _timeTracker.UpdateNtpTime(_ntpValidator.GetCurrentNtpTime()!.Value);
                     }
                     else
                     {
-                        EventLog.WriteEntry("NTP validation failed - network unavailable or server unreachable", EventLogEntryType.Warning);
+                        System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", "NTP validation failed - network unavailable or server unreachable", EventLogEntryType.Warning);
                     }
 
                     if (_ntpValidator.IsTimeTampered())
                     {
-                        EventLog.WriteEntry("Time tampering detected! Triggering lock screen.", EventLogEntryType.Warning);
+                        System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", "Time tampering detected! Triggering lock screen.", EventLogEntryType.Warning);
                         TriggerLockScreen(LockReason.TimeTampered);
                     }
                 }
             }
             catch (Exception ex)
             {
-                EventLog.WriteEntry($"NTP check error: {ex.Message}", EventLogEntryType.Warning);
+                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"NTP check error: {ex.Message}", EventLogEntryType.Warning);
             }
         }
 
@@ -285,7 +285,7 @@ namespace ChildPCGuard.GuardService
                             }
                             else
                             {
-                                EventLog.WriteEntry($"Invalid AddTime payload: {message.Payload}", EventLogEntryType.Warning);
+                                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Invalid AddTime payload: {message.Payload}", EventLogEntryType.Warning);
                             }
                             break;
                         case PipeMessageType.LockNow:
@@ -299,7 +299,7 @@ namespace ChildPCGuard.GuardService
             }
             catch (Exception ex)
             {
-                EventLog.WriteEntry($"Pipe message error: {ex.Message}", EventLogEntryType.Warning);
+                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Pipe message error: {ex.Message}", EventLogEntryType.Warning);
             }
         }
 
@@ -312,13 +312,13 @@ namespace ChildPCGuard.GuardService
             if (inputHash == config.AdminPasswordHash)
             {
                 _timeTracker.ResetDaily();
-                EventLog.WriteEntry("Service unlocked by password.", EventLogEntryType.Information);
+                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", "Service unlocked by password.", EventLogEntryType.Information);
             }
         }
 
         private void OnAgentDead(string agentName)
         {
-            EventLog.WriteEntry($"Agent {agentName} died, restarting...", EventLogEntryType.Warning);
+            System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Agent {agentName} died, restarting...", EventLogEntryType.Warning);
             _processGuardian.RestartAgent(agentName);
         }
 
@@ -342,11 +342,11 @@ namespace ChildPCGuard.GuardService
                     _notificationHelper = new NotificationHelper(config);
                 }
 
-                EventLog.WriteEntry("Configuration reloaded successfully.", EventLogEntryType.Information);
+                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", "Configuration reloaded successfully.", EventLogEntryType.Information);
             }
             catch (Exception ex)
             {
-                EventLog.WriteEntry($"Config reload error: {ex.Message}", EventLogEntryType.Warning);
+                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Config reload error: {ex.Message}", EventLogEntryType.Warning);
             }
         }
 
@@ -392,7 +392,7 @@ namespace ChildPCGuard.GuardService
             }
             catch (Exception ex)
             {
-                EventLog.WriteEntry($"Failed to trigger lock screen: {ex.Message}", EventLogEntryType.Error);
+                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Failed to trigger lock screen: {ex.Message}", EventLogEntryType.Error);
             }
         }
 
@@ -400,14 +400,14 @@ namespace ChildPCGuard.GuardService
         {
             try
             {
-                EventLog.WriteEntry("Shutdown triggered by schedule.", EventLogEntryType.Information);
+                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", "Shutdown triggered by schedule.", EventLogEntryType.Information);
                 NativeAPI.LockWorkStation();
                 Thread.Sleep(30000);
                 TriggerShutdownCommand();
             }
             catch (Exception ex)
             {
-                EventLog.WriteEntry($"Shutdown error: {ex.Message}", EventLogEntryType.Error);
+                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Shutdown error: {ex.Message}", EventLogEntryType.Error);
             }
         }
 

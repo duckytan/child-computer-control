@@ -41,7 +41,7 @@ namespace ChildPCGuard.GuardService
             }
             catch (Exception ex)
             {
-                EventLog.WriteEntry($"AppMonitor error: {ex.Message}", EventLogEntryType.Warning);
+                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"AppMonitor error: {ex.Message}", System.Diagnostics.EventLogEntryType.Warning);
             }
         }
 
@@ -70,7 +70,7 @@ namespace ChildPCGuard.GuardService
                 if (processName.Equals(blocked, StringComparison.OrdinalIgnoreCase) ||
                     processName.Contains(blocked, StringComparison.OrdinalIgnoreCase))
                 {
-                    EventLog.WriteEntry($"Blocked app detected: {processName}", EventLogEntryType.Warning);
+                    System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Blocked app detected: {processName}", System.Diagnostics.EventLogEntryType.Warning);
                     return;
                 }
             }
@@ -137,7 +137,7 @@ namespace ChildPCGuard.GuardService
             }
             catch (Exception ex)
             {
-                EventLog.WriteEntry($"Failed to record process usage: {ex.Message}", EventLogEntryType.Warning);
+                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Failed to record process usage: {ex.Message}", System.Diagnostics.EventLogEntryType.Warning);
             }
         }
 

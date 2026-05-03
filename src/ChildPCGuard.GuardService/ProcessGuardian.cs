@@ -13,7 +13,7 @@ namespace ChildPCGuard.GuardService
         private readonly AppConfiguration _config;
         private readonly Dictionary<string, DateTime> _lastHeartbeat = new Dictionary<string, DateTime>();
         private readonly Dictionary<string, Process> _agentProcesses = new Dictionary<string, Process>();
-        private System.Threading.Timer _heartbeatCheckTimer;
+        private Timer _heartbeatCheckTimer;
         private bool _isRunning;
 
         private readonly string[] _agentPaths = new string[]
@@ -40,7 +40,7 @@ namespace ChildPCGuard.GuardService
                 StartAgent(agentName, agentPath, i == 0 ? "--agent-a" : "--agent-b");
             }
 
-            _heartbeatCheckTimer = new Timer(CheckHeartbeats, null,
+            _heartbeatCheckTimer = new System.Threading.Timer(CheckHeartbeats, null,
                 TimeSpan.FromSeconds(10),
                 TimeSpan.FromSeconds(10));
         }
@@ -93,7 +93,7 @@ namespace ChildPCGuard.GuardService
             }
             catch (Exception ex)
             {
-                EventLog.WriteEntry($"Failed to start agent {agentName}: {ex.Message}", EventLogEntryType.Error);
+                System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Failed to start agent {agentName}: {ex.Message}", System.Diagnostics.EventLogEntryType.Error);
             }
         }
 
@@ -127,7 +127,7 @@ namespace ChildPCGuard.GuardService
             {
                 if (DateTime.Now - kvp.Value > timeout)
                 {
-                    EventLog.WriteEntry($"Agent {kvp.Key} heartbeat timeout, restarting...", EventLogEntryType.Warning);
+                    System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Agent {kvp.Key} heartbeat timeout, restarting...", System.Diagnostics.EventLogEntryType.Warning);
                     OnAgentDead?.Invoke(kvp.Key);
                     RestartAgent(kvp.Key);
                 }
@@ -137,7 +137,7 @@ namespace ChildPCGuard.GuardService
             {
                 if (kvp.Value.HasExited)
                 {
-                    EventLog.WriteEntry($"Agent {kvp.Key} process exited, restarting...", EventLogEntryType.Warning);
+                    System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Agent {kvp.Key} process exited, restarting...", System.Diagnostics.EventLogEntryType.Warning);
                     RestartAgent(kvp.Key);
                 }
             }

@@ -51,8 +51,8 @@ namespace ChildPCGuard.GuardService
                         PipeTransmissionMode.Byte,
                         PipeOptions.None,
                         1024,
-                        1024,
-                        pipeSecurity);
+                        1024);
+                    server.SetAccessControl(pipeSecurity);
 
                     server.WaitForConnection();
                     HandleClient(server);

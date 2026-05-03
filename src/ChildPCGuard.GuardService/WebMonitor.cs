@@ -71,7 +71,7 @@ namespace ChildPCGuard.GuardService
                 {
                     if (content.Contains(blockedSite, StringComparison.OrdinalIgnoreCase))
                     {
-                        EventLog.WriteEntry($"Blocked site accessed: {blockedSite}", EventLogEntryType.Warning);
+                        System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Blocked site accessed: {blockedSite}", System.Diagnostics.EventLogEntryType.Warning);
                         RecordWebAccess($"*{blockedSite}*", blockedSite);
                     }
                 }
@@ -143,7 +143,7 @@ namespace ChildPCGuard.GuardService
                 {
                     if (content.Contains(blockedSite, StringComparison.OrdinalIgnoreCase))
                     {
-                        EventLog.WriteEntry($"Blocked site accessed: {blockedSite}", EventLogEntryType.Warning);
+                        System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Blocked site accessed: {blockedSite}", System.Diagnostics.EventLogEntryType.Warning);
                         RecordWebAccess($"*{blockedSite}*", blockedSite);
                     }
                 }
@@ -161,7 +161,7 @@ namespace ChildPCGuard.GuardService
             {
                 if (url.Contains(blockedSite, StringComparison.OrdinalIgnoreCase))
                 {
-                    EventLog.WriteEntry($"Blocked site accessed: {blockedSite}", EventLogEntryType.Warning);
+                    System.Diagnostics.EventLog.WriteEntry("ChildPCGuard", $"Blocked site accessed: {blockedSite}", System.Diagnostics.EventLogEntryType.Warning);
                     RecordWebAccess(url, blockedSite);
                 }
             }

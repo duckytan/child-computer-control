@@ -16,17 +16,10 @@ namespace ChildPCGuard.GuardService
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            this.EventLog = new System.Diagnostics.EventLog();
             ((System.ComponentModel.ISupportInitialize)(this.EventLog)).BeginInit();
-            // 
-            // EventLog
-            // 
-            this.EventLog.Log = "Application";
-            this.EventLog.Source = "WinSecSvc_a1b2c3d4";
-            this.EventLog.MachineName = ".";
-            // 
+            //
             // GuardService
-            // 
+            //
             this.CanStop = true;
             this.CanShutdown = true;
             this.CanPauseAndContinue = false;
