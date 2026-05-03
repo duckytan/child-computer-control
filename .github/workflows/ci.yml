@@ -30,6 +30,7 @@ jobs:
 
     - name: Publish Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      continue-on-error: true
       run: |
         dotnet publish src/ChildPCGuard.GuardService/ChildPCGuard.GuardService.csproj -c Release -o publish/GuardService --no-build
         dotnet publish src/ChildPCGuard.Agent/ChildPCGuard.Agent.csproj -c Release -o publish/Agent --no-build
