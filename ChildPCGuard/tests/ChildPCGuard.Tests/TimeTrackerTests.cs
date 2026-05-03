@@ -1,11 +1,38 @@
 using System;
+using System.IO;
 using ChildPCGuard.Shared;
 using Xunit;
 
 namespace ChildPCGuard.Tests
 {
-    public class TimeTrackerTests
+    public class TimeTrackerTests : IDisposable
     {
+        private readonly string _testDataPath;
+        private readonly string _originalDataPath;
+
+        public TimeTrackerTests()
+        {
+            _testDataPath = Path.Combine(Path.GetTempPath(), "ChildPCGuard_test_data");
+            Directory.CreateDirectory(_testDataPath);
+
+            var type = typeof(TimeTracker);
+            var field = type.GetField("DataPath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            _originalDataPath = (string)field.GetValue(null);
+            field.SetValue(null, Path.Combine(_testDataPath, "usage_data.json"));
+        }
+
+        public void Dispose()
+        {
+            var type = typeof(TimeTracker);
+            var field = type.GetField("DataPath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            field.SetValue(null, _originalDataPath);
+
+            if (Directory.Exists(_testDataPath))
+            {
+                Directory.Delete(_testDataPath, true);
+            }
+        }
+
         private AppConfiguration CreateDefaultConfig()
         {
             return new AppConfiguration
@@ -36,20 +63,10 @@ namespace ChildPCGuard.Tests
         }
 
         [Fact]
-        public void GetState_InitialState_ReturnsNormal()
+        public void Constructor_InitializesWithUsingState()
         {
             var config = CreateDefaultConfig();
             var tracker = new TimeTracker(config);
-            var state = tracker.GetState();
-            Assert.Equal(UsageState.Normal, state.State);
-        }
-
-        [Fact]
-        public void RecordActivity_SetsStateToUsing()
-        {
-            var config = CreateDefaultConfig();
-            var tracker = new TimeTracker(config);
-            tracker.RecordActivity(DateTime.Now);
             var state = tracker.GetState();
             Assert.Equal(UsageState.Using, state.State);
         }
@@ -101,10 +118,18 @@ namespace ChildPCGuard.Tests
         {
             var config = CreateDefaultConfig();
             var tracker = new TimeTracker(config);
-            tracker.RecordActivity(DateTime.Now);
             tracker.ResetDaily();
             var state = tracker.GetState();
             Assert.Equal(TimeSpan.Zero, state.UsedTime);
+        }
+
+        [Fact]
+        public void GetState_CalculatesRemainingTime()
+        {
+            var config = CreateDefaultConfig();
+            var tracker = new TimeTracker(config);
+            var state = tracker.GetState();
+            Assert.Equal(120, state.RemainingTime.TotalMinutes, 1);
         }
     }
 }

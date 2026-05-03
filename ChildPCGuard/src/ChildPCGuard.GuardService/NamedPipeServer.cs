@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.IO.Pipes;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Threading;
 using System.Runtime.Serialization.Formatters.Binary;
 using ChildPCGuard.Shared;
@@ -12,7 +14,6 @@ namespace ChildPCGuard.GuardService
         private readonly string _pipeName;
         private Thread _serverThread;
         private bool _isRunning;
-        private NamedPipeServerStream? _server;
 
         public event Action<PipeMessage>? OnMessageReceived;
 
@@ -32,17 +33,18 @@ namespace ChildPCGuard.GuardService
         public void Stop()
         {
             _isRunning = false;
-            _server?.Dispose();
             _serverThread?.Join(1000);
         }
 
         private void ServerLoop()
         {
+            var pipeSecurity = CreatePipeSecurity();
+
             while (_isRunning)
             {
                 try
                 {
-                    _server = NamedPipeServerStreamAcl.Create(
+                    using var server = new NamedPipeServerStream(
                         _pipeName,
                         PipeDirection.InOut,
                         NamedPipeServerStream.MaxAllowedServerInstances,
@@ -50,18 +52,41 @@ namespace ChildPCGuard.GuardService
                         PipeOptions.None,
                         1024,
                         1024,
-                        null,
-                        System.Security.AccessControl.PipeSecurityAuditRule,
-                        System.Security.AccessControl.AllowEveryone);
+                        pipeSecurity);
 
-                    _server.WaitForConnection();
-                    HandleClient(_server);
+                    server.WaitForConnection();
+                    HandleClient(server);
                 }
                 catch (Exception)
                 {
                     Thread.Sleep(100);
                 }
             }
+        }
+
+        private static PipeSecurity CreatePipeSecurity()
+        {
+            var security = new PipeSecurity();
+
+            var systemSid = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+            var adminSid = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+
+            security.AddAccessRule(new PipeAccessRule(
+                systemSid,
+                PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance,
+                AccessControlType.Allow));
+
+            security.AddAccessRule(new PipeAccessRule(
+                adminSid,
+                PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance,
+                AccessControlType.Allow));
+
+            security.AddAccessRule(new PipeAccessRule(
+                new SecurityIdentifier(WellKnownSidType.WorldSid, null),
+                PipeAccessRights.FullControl,
+                AccessControlType.Deny));
+
+            return security;
         }
 
         private void HandleClient(NamedPipeServerStream server)

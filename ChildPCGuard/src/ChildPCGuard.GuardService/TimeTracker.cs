@@ -17,13 +17,14 @@ namespace ChildPCGuard.GuardService
         public TimeTracker(AppConfiguration config)
         {
             _config = config;
+            _lastCheckTime = DateTime.Now;
             ResetIfNewDay();
             LoadDailyData();
         }
 
         public void Update()
         {
-            LASTINPUTINFO lastInput = new LASTINPUTINFO();
+            NativeAPI.LASTINPUTINFO lastInput = new NativeAPI.LASTINPUTINFO();
             lastInput.cbSize = (uint)Marshal.SizeOf(lastInput);
 
             if (NativeAPI.GetLastInputInfo(ref lastInput))
@@ -31,14 +32,19 @@ namespace ChildPCGuard.GuardService
                 uint currentTick = (uint)Environment.TickCount;
                 uint idleMs = currentTick - lastInput.dwTime;
 
-                if (idleMs < _config.IdleThresholdMs)
+                if (_lastCheckTime != DateTime.MinValue)
                 {
-                    _todayData.TotalUsedTime += TimeSpan.FromMilliseconds(idleMs);
-                    _todayData.ContinuousUsedTime += TimeSpan.FromMilliseconds(idleMs);
+                    var elapsed = DateTime.Now - _lastCheckTime;
 
-                    if (_todayData.CurrentState == UsageState.Resting)
+                    if (idleMs < _config.IdleThresholdMs)
                     {
-                        _todayData.CurrentState = UsageState.Using;
+                        _todayData.TotalUsedTime += elapsed;
+                        _todayData.ContinuousUsedTime += elapsed;
+
+                        if (_todayData.CurrentState == UsageState.Resting)
+                        {
+                            _todayData.CurrentState = UsageState.Using;
+                        }
                     }
                 }
 
@@ -49,17 +55,23 @@ namespace ChildPCGuard.GuardService
             SaveDailyData();
         }
 
-        public (UsageState State, TimeSpan UsedTime, TimeSpan ContinuousTime, TimeSpan RestRemainingTime) GetState()
+        public (UsageState State, TimeSpan UsedTime, TimeSpan ContinuousTime, TimeSpan RestRemainingTime, int ExtraMinutes, TimeSpan RemainingTime) GetState()
         {
             ResetIfNewDay();
 
+            int limit = IsWeekend() ? _config.Rules.Weekends.DailyLimitMinutes : _config.Rules.Weekdays.DailyLimitMinutes;
+            var usedTime = _todayData.TotalUsedTime + TimeSpan.FromMinutes(_todayData.ExtraMinutesToday);
+            var remainingTime = TimeSpan.FromMinutes(limit) - usedTime;
+
             return (
                 _todayData.CurrentState,
-                _todayData.TotalUsedTime + TimeSpan.FromMinutes(_todayData.ExtraMinutesToday),
+                usedTime,
                 _todayData.ContinuousUsedTime,
                 _todayData.CurrentState == UsageState.Resting && _todayData.RestEndTime.HasValue
                     ? _todayData.RestEndTime.Value - DateTime.Now
-                    : TimeSpan.Zero
+                    : TimeSpan.Zero,
+                _todayData.ExtraMinutesToday,
+                remainingTime
             );
         }
 

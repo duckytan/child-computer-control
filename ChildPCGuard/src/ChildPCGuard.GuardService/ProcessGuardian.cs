@@ -121,7 +121,7 @@ namespace ChildPCGuard.GuardService
         {
             if (!_isRunning) return;
 
-            var timeout = TimeSpan.FromSeconds(_config.IdleThresholdMs / 200 + 5);
+            var timeout = TimeSpan.FromSeconds(30);
 
             foreach (var kvp in _lastHeartbeat.ToList())
             {

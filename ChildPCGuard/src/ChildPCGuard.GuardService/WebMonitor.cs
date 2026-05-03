@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -50,25 +51,49 @@ namespace ChildPCGuard.GuardService
             {
                 if (!File.Exists(historyPath)) return;
 
-                string[] lines = { };
-                try
+                if (IsFileLocked(historyPath)) return;
+
+                var lastChecked = _lastCheckedTime.ContainsKey(historyPath)
+                    ? _lastCheckedTime[historyPath]
+                    : DateTime.MinValue;
+
+                var fileInfo = new FileInfo(historyPath);
+                if (fileInfo.LastWriteTime <= lastChecked) return;
+
+                byte[] buffer = new byte[4096];
+                using (var fs = new FileStream(historyPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
-                    lines = File.ReadAllLines(historyPath);
-                }
-                catch
-                {
-                    return;
+                    fs.Read(buffer, 0, buffer.Length);
                 }
 
-                foreach (var line in lines)
+                string content = System.Text.Encoding.UTF8.GetString(buffer);
+                foreach (var blockedSite in _config.BlockedSites)
                 {
-                    if (line.Contains("youtube.com") || line.Contains("youtube"))
+                    if (content.Contains(blockedSite, StringComparison.OrdinalIgnoreCase))
                     {
-                        CheckBlockedSitesInUrl(line);
+                        EventLog.WriteEntry($"Blocked site accessed: {blockedSite}", EventLogEntryType.Warning);
+                        RecordWebAccess($"*{blockedSite}*", blockedSite);
                     }
                 }
+
+                _lastCheckedTime[historyPath] = DateTime.Now;
             }
             catch { }
+        }
+
+        private bool IsFileLocked(string filePath)
+        {
+            try
+            {
+                using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+                    return false;
+                }
+            }
+            catch
+            {
+                return true;
+            }
         }
 
         private void CheckFirefoxHistory()
@@ -87,8 +112,43 @@ namespace ChildPCGuard.GuardService
                     string historyPath = Path.Combine(profile, "places.sqlite");
                     if (File.Exists(historyPath))
                     {
+                        CheckFirefoxHistoryFile(historyPath);
                     }
                 }
+            }
+            catch { }
+        }
+
+        private void CheckFirefoxHistoryFile(string historyPath)
+        {
+            try
+            {
+                if (IsFileLocked(historyPath)) return;
+
+                var lastChecked = _lastCheckedTime.ContainsKey(historyPath)
+                    ? _lastCheckedTime[historyPath]
+                    : DateTime.MinValue;
+
+                var fileInfo = new FileInfo(historyPath);
+                if (fileInfo.LastWriteTime <= lastChecked) return;
+
+                byte[] buffer = new byte[8192];
+                using (var fs = new FileStream(historyPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+                    fs.Read(buffer, 0, buffer.Length);
+                }
+
+                string content = System.Text.Encoding.UTF8.GetString(buffer);
+                foreach (var blockedSite in _config.BlockedSites)
+                {
+                    if (content.Contains(blockedSite, StringComparison.OrdinalIgnoreCase))
+                    {
+                        EventLog.WriteEntry($"Blocked site accessed: {blockedSite}", EventLogEntryType.Warning);
+                        RecordWebAccess($"*{blockedSite}*", blockedSite);
+                    }
+                }
+
+                _lastCheckedTime[historyPath] = DateTime.Now;
             }
             catch { }
         }
@@ -119,27 +179,31 @@ namespace ChildPCGuard.GuardService
                     Title = domain
                 };
 
-                var log = new WebUsageLog
-                {
-                    Date = DateTime.Today.ToString("yyyy-MM-dd"),
-                    Records = new List<WebUsageRecord> { record }
-                };
-
                 string logPath = Path.Combine(@"C:\ProgramData\ChildPCGuard\logs",
                     $"web_{DateTime.Today:yyyy-MM-dd}.json");
 
-                List<WebUsageLog> existingLogs = new List<WebUsageLog>();
+                List<WebUsageRecord> existingRecords = new List<WebUsageRecord>();
                 if (File.Exists(logPath))
                 {
                     var json = File.ReadAllText(logPath);
                     var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                    existingLogs = JsonSerializer.Deserialize<List<WebUsageLog>>(json, options) ?? new List<WebUsageLog>();
+                    var logs = JsonSerializer.Deserialize<List<WebUsageLog>>(json, options);
+                    if (logs != null && logs.Count > 0)
+                    {
+                        existingRecords = logs[0].Records;
+                    }
                 }
 
-                existingLogs.Add(log);
+                existingRecords.Add(record);
+
+                var log = new WebUsageLog
+                {
+                    Date = DateTime.Today.ToString("yyyy-MM-dd"),
+                    Records = existingRecords
+                };
 
                 var options2 = new JsonSerializerOptions { WriteIndented = true, PropertyNameCaseInsensitive = true };
-                File.WriteAllText(logPath, JsonSerializer.Serialize(existingLogs, options2));
+                File.WriteAllText(logPath, JsonSerializer.Serialize(new[] { log }, options2));
             }
             catch { }
         }
@@ -170,25 +234,20 @@ namespace ChildPCGuard.GuardService
             try
             {
                 if (!File.Exists(historyPath)) return false;
+                if (IsFileLocked(historyPath)) return false;
 
-                string[] lines = { };
-                try
+                byte[] buffer = new byte[4096];
+                using (var fs = new FileStream(historyPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
-                    lines = File.ReadAllLines(historyPath);
-                }
-                catch
-                {
-                    return false;
+                    fs.Read(buffer, 0, buffer.Length);
                 }
 
-                foreach (var line in lines)
+                string content = System.Text.Encoding.UTF8.GetString(buffer);
+                foreach (var blockedSite in _config.BlockedSites)
                 {
-                    foreach (var blockedSite in _config.BlockedSites)
+                    if (content.Contains(blockedSite, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (line.Contains(blockedSite, StringComparison.OrdinalIgnoreCase))
-                        {
-                            return true;
-                        }
+                        return true;
                     }
                 }
             }

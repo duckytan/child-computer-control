@@ -37,21 +37,26 @@ namespace ChildPCGuard.GuardService
             try
             {
                 using var client = new UdpClient(server, 123);
+                client.Client.ReceiveTimeout = 3000;
+                client.Client.SendTimeout = 3000;
+
                 var ntpData = new byte[48];
                 ntpData[0] = 0x1B;
 
                 client.Send(ntpData, ntpData.Length);
-                client.Receive(ref ntpData);
+                var response = client.Receive(ref ntpData);
 
-                ulong timestamp = 0;
-                timestamp = ((ulong)ntpData[40] << 24) | ((ulong)ntpData[41] << 16) |
-                            ((ulong)ntpData[42] << 8) | ((ulong)ntpData[43]);
-                timestamp ^= 0xFFFFFFFF00000000;
+                if (response.Length < 48) return null;
 
-                var dateTime = new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-                dateTime = dateTime.AddSeconds((long)timestamp).ToLocalTime();
+                ulong intPart = ((ulong)ntpData[40] << 24) | ((ulong)ntpData[41] << 16) |
+                                ((ulong)ntpData[42] << 8) | ((ulong)ntpData[43]);
+                ulong fracPart = ((ulong)ntpData[44] << 24) | ((ulong)ntpData[45] << 16) |
+                                 ((ulong)ntpData[46] << 8) | ((ulong)ntpData[47]);
 
-                return dateTime;
+                var epoch = new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                var ntpTime = epoch.AddSeconds(intPart).AddTicks((long)(fracPart * 10000000.0 / 0x100000000));
+
+                return ntpTime.ToLocalTime();
             }
             catch
             {

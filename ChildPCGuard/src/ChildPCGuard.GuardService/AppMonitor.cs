@@ -103,36 +103,37 @@ namespace ChildPCGuard.GuardService
                 var duration = (int)(DateTime.Now - startTime).TotalSeconds;
                 if (duration < 5) return;
 
-                var log = new ProcessUsageLog
-                {
-                    Date = DateTime.Today.ToString("yyyy-MM-dd"),
-                    Records = new List<ProcessUsageRecord>
-                    {
-                        new ProcessUsageRecord
-                        {
-                            Timestamp = startTime,
-                            ProcessName = processName,
-                            ProcessPath = GetProcessPath(processName),
-                            Duration = duration
-                        }
-                    }
-                };
-
                 string logPath = Path.Combine(@"C:\ProgramData\ChildPCGuard\logs",
                     $"process_{DateTime.Today:yyyy-MM-dd}.json");
 
-                List<ProcessUsageLog> existingLogs = new List<ProcessUsageLog>();
+                List<ProcessUsageRecord> existingRecords = new List<ProcessUsageRecord>();
                 if (File.Exists(logPath))
                 {
                     var json = File.ReadAllText(logPath);
                     var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                    existingLogs = JsonSerializer.Deserialize<List<ProcessUsageLog>>(json, options) ?? new List<ProcessUsageLog>();
+                    var logs = JsonSerializer.Deserialize<List<ProcessUsageLog>>(json, options);
+                    if (logs != null && logs.Count > 0)
+                    {
+                        existingRecords = logs[0].Records;
+                    }
                 }
 
-                existingLogs.Add(log);
+                existingRecords.Add(new ProcessUsageRecord
+                {
+                    Timestamp = startTime,
+                    ProcessName = processName,
+                    ProcessPath = GetProcessPath(processName),
+                    Duration = duration
+                });
+
+                var log = new ProcessUsageLog
+                {
+                    Date = DateTime.Today.ToString("yyyy-MM-dd"),
+                    Records = existingRecords
+                };
 
                 var options2 = new JsonSerializerOptions { WriteIndented = true, PropertyNameCaseInsensitive = true };
-                File.WriteAllText(logPath, JsonSerializer.Serialize(existingLogs, options2));
+                File.WriteAllText(logPath, JsonSerializer.Serialize(new[] { log }, options2));
             }
             catch (Exception ex)
             {

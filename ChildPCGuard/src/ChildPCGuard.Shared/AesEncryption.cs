@@ -91,5 +91,14 @@ namespace ChildPCGuard.Shared
                 return Convert.ToBase64String(bytes);
             }
         }
+
+        public static string ComputeHash(string input)
+        {
+            using (var sha256 = SHA256.Create())
+            {
+                byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
+                return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
+            }
+        }
     }
 }

@@ -61,6 +61,15 @@ namespace ChildPCGuard.GuardService
             }
         }
 
+        public void Reload()
+        {
+            lock (_lock)
+            {
+                _cachedConfig = null;
+                Load();
+            }
+        }
+
         private AppConfiguration CreateDefaultConfig()
         {
             return new AppConfiguration

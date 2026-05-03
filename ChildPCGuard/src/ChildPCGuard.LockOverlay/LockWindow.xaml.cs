@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
@@ -84,9 +85,11 @@ namespace ChildPCGuard.LockOverlay
         {
             try
             {
+                _originalDesktop = NativeAPI.GetThreadDesktop(NativeAPI.GetCurrentThreadId());
+
                 _lockDesktop = CreateDesktop("LockScreen_" + Guid.NewGuid().ToString("N"),
                     IntPtr.Zero, IntPtr.Zero, 0,
-                    NativeAPI.DESKTUP_CREATEWINDOW | NativeAPI.DESKTOP_SWITCHDESKTOP,
+                    NativeAPI.DESKTOP_CREATEWINDOW | NativeAPI.DESKTOP_SWITCHDESKTOP,
                     IntPtr.Zero);
 
                 if (_lockDesktop != IntPtr.Zero)
@@ -101,18 +104,32 @@ namespace ChildPCGuard.LockOverlay
 
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            if (nCode >= 0 && wParam == (IntPtr)0x0100)
+            if (nCode >= 0)
             {
                 int vkCode = Marshal.ReadInt32(lParam);
 
-                if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift) &&
-                    vkCode == 0x7B)
+                bool isCtrl = GetAsyncKeyState(NativeAPI.VK_LCONTROL) < 0 || GetAsyncKeyState(NativeAPI.VK_RCONTROL) < 0;
+                bool isAlt = GetAsyncKeyState(NativeAPI.VK_LALT) < 0 || GetAsyncKeyState(NativeAPI.VK_RALT) < 0;
+                bool isShift = GetAsyncKeyState(NativeAPI.VK_LSHIFT) < 0 || GetAsyncKeyState(NativeAPI.VK_RSHIFT) < 0;
+
+                if (isCtrl && isAlt && isShift && vkCode == NativeAPI.VK_F12)
                 {
                     _emergencyKeyCount++;
                     if (_emergencyKeyCount >= 5)
                     {
                         ShowEmergencyDialog();
+                        _emergencyKeyCount = 0;
                     }
+                    return (IntPtr)1;
+                }
+
+                bool isWinKey = vkCode == NativeAPI.VK_LWIN || vkCode == NativeAPI.VK_RWIN;
+                bool isAltTab = isAlt && vkCode == NativeAPI.VK_TAB;
+                bool isCtrlEsc = isCtrl && vkCode == NativeAPI.VK_ESCAPE;
+
+                if (isWinKey || isAltTab || isCtrlEsc)
+                {
+                    return (IntPtr)1;
                 }
             }
 
@@ -206,7 +223,7 @@ namespace ChildPCGuard.LockOverlay
                     var config = JsonSerializer.Deserialize<AppConfiguration>(json, options);
                     if (config != null && !string.IsNullOrEmpty(config.AdminPasswordHash))
                     {
-                        var hashedInput = AesEncryption.Encrypt(password, "ChildPCGuard");
+                        var hashedInput = AesEncryption.ComputeHash(password);
                         if (hashedInput == config.AdminPasswordHash)
                         {
                             _errorCount = 0;
@@ -262,9 +279,21 @@ namespace ChildPCGuard.LockOverlay
 
         private void ShowEmergencyDialog()
         {
-            MessageBox.Show("紧急解锁已触发。请联系家长或管理员。",
-                "紧急解锁", MessageBoxButton.OK, MessageBoxImage.Warning);
-            _emergencyKeyCount = 0;
+            try
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var result = MessageBox.Show("紧急解锁将通知管理员并暂时解锁电脑。\n是否继续？",
+                        "紧急解锁", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        EventLog.WriteEntry("Emergency unlock triggered.", EventLogEntryType.Warning);
+                        Unlock();
+                    }
+                });
+            }
+            catch { }
         }
 
         protected override void OnClosed(EventArgs e)

@@ -23,9 +23,14 @@ namespace ChildPCGuard.GuardService
             // 
             this.EventLog.Log = "Application";
             this.EventLog.Source = "WinSecSvc_a1b2c3d4";
+            this.EventLog.MachineName = ".";
             // 
             // GuardService
             // 
+            this.CanStop = true;
+            this.CanShutdown = true;
+            this.CanPauseAndContinue = false;
+            this.AutoLog = true;
             this.ServiceName = "WinSecSvc_a1b2c3d4";
             ((System.ComponentModel.ISupportInitialize)(this.EventLog)).EndInit();
         }

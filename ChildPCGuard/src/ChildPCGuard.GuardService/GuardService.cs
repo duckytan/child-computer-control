@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.ServiceProcess;
 using System.Threading;
@@ -13,6 +14,7 @@ namespace ChildPCGuard.GuardService
         private Timer _shutdownCheckTimer;
         private Timer _ntpCheckTimer;
         private CancellationTokenSource _cts;
+        private FileSystemWatcher _configWatcher;
 
         private TimeTracker _timeTracker;
         private ProcessGuardian _processGuardian;
@@ -26,6 +28,7 @@ namespace ChildPCGuard.GuardService
 
         private static readonly string DataDirectory = @"C:\ProgramData\ChildPCGuard";
         private static readonly string LogDirectory = Path.Combine(DataDirectory, "logs");
+        private readonly object _configLock = new object();
 
         public GuardService()
         {
@@ -58,6 +61,11 @@ namespace ChildPCGuard.GuardService
                 _pipeServer.Start();
 
                 _processGuardian.OnAgentDead += OnAgentDead;
+
+                _configWatcher = new FileSystemWatcher(DataDirectory, "config.json");
+                _configWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size;
+                _configWatcher.Changed += OnConfigChanged;
+                _configWatcher.EnableRaisingEvents = true;
 
                 _monitoringTimer = new Timer(MonitoringCallback, null,
                     TimeSpan.FromSeconds(5),
@@ -92,6 +100,7 @@ namespace ChildPCGuard.GuardService
         protected override void OnStop()
         {
             _cts?.Cancel();
+            _configWatcher?.Dispose();
             _monitoringTimer?.Dispose();
             _shutdownCheckTimer?.Dispose();
             _ntpCheckTimer?.Dispose();
@@ -129,44 +138,47 @@ namespace ChildPCGuard.GuardService
         {
             try
             {
-                var config = _configManager.Load();
-                if (!config.IsEnabled) return;
-
-                _timeTracker.Update();
-                _appMonitor.CheckCurrentProcess();
-                _webMonitor.CheckCurrentBrowsers();
-
-                var stateInfo = _timeTracker.GetState();
-
-                switch (stateInfo.State)
+                lock (_configLock)
                 {
-                    case UsageState.Using:
-                        if (stateInfo.ContinuousTime >= TimeSpan.FromMinutes(config.ContinuousLimitMinutes))
-                        {
-                            _timeTracker.StartRest();
-                            TriggerLockScreen(LockReason.ContinuousLimit);
-                        }
-                        CheckWarningNotifications(stateInfo.RemainingTime, config);
-                        break;
-                    case UsageState.Locked:
-                        TriggerLockScreen(LockReason.DailyLimitReached);
-                        break;
-                    case UsageState.Resting:
-                        if (stateInfo.RestRemainingTime <= TimeSpan.Zero)
-                        {
-                            _timeTracker.EndRest();
-                        }
-                        break;
-                }
+                    var config = _configManager.Load();
+                    if (!config.IsEnabled) return;
 
-                if (_appMonitor.IsBlockedProcessRunning())
-                {
-                    TriggerLockScreen(LockReason.BlockedApp);
-                }
+                    _timeTracker.Update();
+                    _appMonitor.CheckCurrentProcess();
+                    _webMonitor.CheckCurrentBrowsers();
 
-                if (_webMonitor.IsBlockedSiteAccessed())
-                {
-                    TriggerLockScreen(LockReason.BlockedSite);
+                    var stateInfo = _timeTracker.GetState();
+
+                    switch (stateInfo.State)
+                    {
+                        case UsageState.Using:
+                            if (stateInfo.ContinuousTime >= TimeSpan.FromMinutes(config.ContinuousLimitMinutes))
+                            {
+                                _timeTracker.StartRest();
+                                TriggerLockScreen(LockReason.ContinuousLimit);
+                            }
+                            CheckWarningNotifications(stateInfo.RemainingTime, config);
+                            break;
+                        case UsageState.Locked:
+                            TriggerLockScreen(LockReason.DailyLimitReached);
+                            break;
+                        case UsageState.Resting:
+                            if (stateInfo.RestRemainingTime <= TimeSpan.Zero)
+                            {
+                                _timeTracker.EndRest();
+                            }
+                            break;
+                    }
+
+                    if (_appMonitor.IsBlockedProcessRunning())
+                    {
+                        TriggerLockScreen(LockReason.BlockedApp);
+                    }
+
+                    if (_webMonitor.IsBlockedSiteAccessed())
+                    {
+                        TriggerLockScreen(LockReason.BlockedSite);
+                    }
                 }
             }
             catch (Exception ex)
@@ -190,12 +202,25 @@ namespace ChildPCGuard.GuardService
         {
             try
             {
-                var config = _configManager.Load();
-                if (_shutdownScheduler.ShouldShutdown())
+                lock (_configLock)
                 {
-                    _notificationHelper.ShowWarning("电脑将在 60 秒后自动关机");
-                    Thread.Sleep(60000);
-                    TriggerShutdown();
+                    var config = _configManager.Load();
+                    if (_shutdownScheduler.ShouldShutdown())
+                    {
+                        _notificationHelper.ShowWarning("电脑将在 60 秒后自动关机");
+
+                        Task.Delay(60000).ContinueWith(t =>
+                        {
+                            try
+                            {
+                                TriggerShutdown();
+                            }
+                            catch (Exception ex)
+                            {
+                                EventLog.WriteEntry($"Shutdown execution error: {ex.Message}", EventLogEntryType.Error);
+                            }
+                        }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                    }
                 }
             }
             catch (Exception ex)
@@ -208,22 +233,25 @@ namespace ChildPCGuard.GuardService
         {
             try
             {
-                var config = _configManager.Load();
-                if (!config.UseNtpValidation) return;
+                lock (_configLock)
+                {
+                    var config = _configManager.Load();
+                    if (!config.UseNtpValidation) return;
 
-                if (_ntpValidator.ValidateTime())
-                {
-                    _timeTracker.UpdateNtpTime(_ntpValidator.GetCurrentNtpTime());
-                }
-                else
-                {
-                    EventLog.WriteEntry("NTP validation failed - network unavailable or server unreachable", EventLogEntryType.Warning);
-                }
+                    if (_ntpValidator.ValidateTime())
+                    {
+                        _timeTracker.UpdateNtpTime(_ntpValidator.GetCurrentNtpTime());
+                    }
+                    else
+                    {
+                        EventLog.WriteEntry("NTP validation failed - network unavailable or server unreachable", EventLogEntryType.Warning);
+                    }
 
-                if (_ntpValidator.IsTimeTampered())
-                {
-                    EventLog.WriteEntry("Time tampering detected! Triggering lock screen.", EventLogEntryType.Warning);
-                    TriggerLockScreen(LockReason.TimeTampered);
+                    if (_ntpValidator.IsTimeTampered())
+                    {
+                        EventLog.WriteEntry("Time tampering detected! Triggering lock screen.", EventLogEntryType.Warning);
+                        TriggerLockScreen(LockReason.TimeTampered);
+                    }
                 }
             }
             catch (Exception ex)
@@ -234,28 +262,57 @@ namespace ChildPCGuard.GuardService
 
         private void OnPipeMessageReceived(PipeMessage message)
         {
-            switch (message.Type)
+            try
             {
-                case PipeMessageType.Heartbeat:
-                    _processGuardian.ReceiveHeartbeat(message.ProcessName);
-                    break;
-                case PipeMessageType.GetStatus:
-                    var status = CreateStatusMessage();
-                    _pipeServer.SendMessage(status);
-                    break;
-                case PipeMessageType.UnlockRequest:
-                    HandleUnlockRequest(message);
-                    break;
-                case PipeMessageType.AddTime:
-                    int minutes = int.Parse(message.Payload);
-                    _timeTracker.AddExtraTime(minutes);
-                    break;
-                case PipeMessageType.LockNow:
-                    TriggerLockScreen(LockReason.ManualLock);
-                    break;
-                case PipeMessageType.ShutdownNow:
-                    TriggerShutdown();
-                    break;
+                lock (_configLock)
+                {
+                    switch (message.Type)
+                    {
+                        case PipeMessageType.Heartbeat:
+                            _processGuardian.ReceiveHeartbeat(message.ProcessName);
+                            break;
+                        case PipeMessageType.GetStatus:
+                            var status = CreateStatusMessage();
+                            _pipeServer.SendMessage(status);
+                            break;
+                        case PipeMessageType.UnlockRequest:
+                            HandleUnlockRequest(message);
+                            break;
+                        case PipeMessageType.AddTime:
+                            if (int.TryParse(message.Payload, out int minutes) && minutes > 0)
+                            {
+                                _timeTracker.AddExtraTime(minutes);
+                            }
+                            else
+                            {
+                                EventLog.WriteEntry($"Invalid AddTime payload: {message.Payload}", EventLogEntryType.Warning);
+                            }
+                            break;
+                        case PipeMessageType.LockNow:
+                            TriggerLockScreen(LockReason.ManualLock);
+                            break;
+                        case PipeMessageType.ShutdownNow:
+                            TriggerShutdown();
+                            break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                EventLog.WriteEntry($"Pipe message error: {ex.Message}", EventLogEntryType.Warning);
+            }
+        }
+
+        private void HandleUnlockRequest(PipeMessage message)
+        {
+            var config = _configManager.Load();
+            if (string.IsNullOrEmpty(config.AdminPasswordHash)) return;
+
+            string inputHash = AesEncryption.ComputeHash(message.Payload);
+            if (inputHash == config.AdminPasswordHash)
+            {
+                _timeTracker.ResetDaily();
+                EventLog.WriteEntry("Service unlocked by password.", EventLogEntryType.Information);
             }
         }
 
@@ -265,19 +322,44 @@ namespace ChildPCGuard.GuardService
             _processGuardian.RestartAgent(agentName);
         }
 
-        private void HandleUnlockRequest(PipeMessage message)
+        private void OnConfigChanged(object sender, FileSystemEventArgs e)
         {
+            try
+            {
+                Thread.Sleep(500);
+
+                _configManager.Reload();
+
+                var config = _configManager.Load();
+
+                lock (_configLock)
+                {
+                    _processGuardian = new ProcessGuardian(config);
+                    _appMonitor = new AppMonitor(config);
+                    _webMonitor = new WebMonitor(config);
+                    _shutdownScheduler = new ShutdownScheduler(config);
+                    _ntpValidator = new NtpValidator(config);
+                    _notificationHelper = new NotificationHelper(config);
+                }
+
+                EventLog.WriteEntry("Configuration reloaded successfully.", EventLogEntryType.Information);
+            }
+            catch (Exception ex)
+            {
+                EventLog.WriteEntry($"Config reload error: {ex.Message}", EventLogEntryType.Warning);
+            }
         }
 
         private StatusMessage CreateStatusMessage()
         {
             var stateInfo = _timeTracker.GetState();
             var config = _configManager.Load();
+
             return new StatusMessage
             {
                 CurrentState = stateInfo.State,
                 UsedTimeToday = stateInfo.UsedTime,
-                RemainingTime = TimeSpan.FromMinutes(config.Rules.Weekdays.DailyLimitMinutes) - stateInfo.UsedTime,
+                RemainingTime = stateInfo.RemainingTime,
                 ContinuousUsageTime = stateInfo.ContinuousTime,
                 RestRemainingTime = stateInfo.RestRemainingTime,
                 ShutdownTime = DateTime.Today.Add(TimeSpan.Parse(config.AutoShutdownTime)),

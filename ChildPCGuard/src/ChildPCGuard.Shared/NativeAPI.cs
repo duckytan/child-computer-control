@@ -194,7 +194,7 @@ namespace ChildPCGuard.Shared
         public const uint WAIT_OBJECT_0 = 0x00000000;
         public const uint WAIT_TIMEOUT = 0x00000102;
 
-        public const uint DESKTUP_CREATEWINDOW = 0x0002;
+        public const uint DESKTOP_CREATEWINDOW = 0x0002;
         public const uint DESKTOP_SWITCHDESKTOP = 0x0100;
         public const uint DESKTOP_CREATEMENU = 0x0004;
         public const uint DESKTOP_ENUMERATE = 0x0040;

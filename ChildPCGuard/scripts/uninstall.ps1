@@ -1,9 +1,5 @@
-# ChildPCGuard Uninstallation Script
+# ChildPCGuard Uninstall Script
 # Must be run as Administrator
-
-param(
-    [string]$Password
-)
 
 $ErrorActionPreference = "Stop"
 
@@ -19,63 +15,51 @@ if (-not $isAdmin) {
 
 Write-Host "ChildPCGuard Uninstallation Started..." -ForegroundColor Yellow
 
-# Verify password
-if ($Password) {
-    $configPath = "C:\ProgramData\ChildPCGuard\config.json"
-    if (Test-Path $configPath) {
-        $config = Get-Content $configPath | ConvertFrom-Json
-        Write-Host "Password verification not implemented in this version"
-    }
-}
-
-$serviceName = "WinSecSvc_a1b2c3d4"
-$system32 = $env:SystemRoot + "\System32"
+# Paths
 $installDir = "C:\Program Files\ChildPCGuard"
+$system32 = $env:SystemRoot + "\System32"
 $dataDir = "C:\ProgramData\ChildPCGuard"
+$serviceName = "WinSecSvc_a1b2c3d4"
 
-# Stop service
-Write-Host "Stopping service..."
+# Stop and delete service
+Write-Host "Stopping and removing service..."
 $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
 if ($service) {
     Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 2
+    sc.exe delete $serviceName
+    Write-Host "Service removed."
+} else {
+    Write-Host "Service not found."
 }
 
-# Delete service
-Write-Host "Deleting service..."
-sc.exe delete $serviceName 2>$null
+# Kill running processes
+Write-Host "Terminating running processes..."
+Get-Process -Name "ChildPCGuard.GuardService" -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process -Name "svchost" -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$system32\svchost.exe" -and $_.StartTime -gt (Get-Date).AddHours(-1) } | Stop-Process -Force
+Get-Process -Name "RuntimeBroker" -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$system32\RuntimeBroker.exe" -and $_.StartTime -gt (Get-Date).AddHours(-1) } | Stop-Process -Force
+Get-Process -Name "LockOverlay" -ErrorAction SilentlyContinue | Stop-Process -Force
 
-# Remove files from System32
-Write-Host "Removing files from System32..."
-$filesToRemove = @(
-    "$system32\svchost.exe",
-    "$system32\RuntimeBroker.exe",
-    "$system32\LockOverlay.exe"
-)
-
-foreach ($file in $filesToRemove) {
-    if (Test-Path $file) {
-        Remove-Item $file -Force -ErrorAction SilentlyContinue
-        Write-Host "Removed: $file"
-    }
+# Delete installed files
+Write-Host "Deleting installed files..."
+if (Test-Path "$system32\svchost.exe") {
+    Remove-Item "$system32\svchost.exe" -Force -ErrorAction SilentlyContinue
+}
+if (Test-Path "$system32\RuntimeBroker.exe") {
+    Remove-Item "$system32\RuntimeBroker.exe" -Force -ErrorAction SilentlyContinue
+}
+if (Test-Path "$system32\LockOverlay.exe") {
+    Remove-Item "$system32\LockOverlay.exe" -Force -ErrorAction SilentlyContinue
 }
 
-# Remove scheduled tasks
-Write-Host "Removing scheduled tasks..."
-Unregister-ScheduledTask -TaskName "ChildPCGuard_Backup" -Confirm:$false -ErrorAction SilentlyContinue
-
-# Ask about data directory
-$removeData = Read-Host "Do you want to remove data directory (C:\ProgramData\ChildPCGuard)? (yes/no)"
-if ($removeData -eq "yes") {
-    Write-Host "Removing data directory..."
-    if (Test-Path $dataDir) {
-        Remove-Item $dataDir -Recurse -Force -ErrorAction SilentlyContinue
-    }
-}
-
-# Remove installation directory
-Write-Host "Removing installation directory..."
+# Delete installation directory
 if (Test-Path $installDir) {
     Remove-Item $installDir -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Host "Installation directory removed."
 }
+
+# Delete data directory (optional, keep logs for audit)
+Write-Host "Data directory ($dataDir) preserved for audit purposes."
+Write-Host "To delete all data, run: Remove-Item '$dataDir' -Recurse -Force"
 
 Write-Host "Uninstallation completed!" -ForegroundColor Green
