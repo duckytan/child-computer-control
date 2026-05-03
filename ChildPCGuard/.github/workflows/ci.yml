@@ -10,10 +10,6 @@ jobs:
   build:
     runs-on: windows-latest
 
-    defaults:
-      run:
-        working-directory: ChildPCGuard
-
     steps:
     - uses: actions/checkout@v4
 
@@ -23,25 +19,25 @@ jobs:
         dotnet-version: '8.0'
 
     - name: Restore dependencies
-      run: dotnet restore ChildPCGuard.sln
+      run: dotnet restore ChildPCGuard/ChildPCGuard.sln
 
     - name: Build
-      run: dotnet build ChildPCGuard.sln --no-restore
+      run: dotnet build ChildPCGuard/ChildPCGuard.sln --no-restore
 
     - name: Test
-      run: dotnet test ChildPCGuard.sln --no-build --verbosity normal
+      run: dotnet test ChildPCGuard/ChildPCGuard.sln --no-build --verbosity normal
 
     - name: Publish Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       run: |
-        dotnet publish src/ChildPCGuard.GuardService/ChildPCGuard.GuardService.csproj -c Release -o ../publish/GuardService --no-build
-        dotnet publish src/ChildPCGuard.Agent/ChildPCGuard.Agent.csproj -c Release -o ../publish/Agent --no-build
-        dotnet publish src/ChildPCGuard.LockOverlay/ChildPCGuard.LockOverlay.csproj -c Release -o ../publish/LockOverlay --no-build
+        dotnet publish ChildPCGuard/src/ChildPCGuard.GuardService/ChildPCGuard.GuardService.csproj -c Release -o ChildPCGuard/publish/GuardService --no-build
+        dotnet publish ChildPCGuard/src/ChildPCGuard.Agent/ChildPCGuard.Agent.csproj -c Release -o ChildPCGuard/publish/Agent --no-build
+        dotnet publish ChildPCGuard/src/ChildPCGuard.LockOverlay/ChildPCGuard.LockOverlay.csproj -c Release -o ChildPCGuard/publish/LockOverlay --no-build
 
     - name: Upload Artifacts
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       uses: actions/upload-artifact@v4
       with:
         name: ChildPCGuard-Release
-        path: publish/
+        path: ChildPCGuard/publish/
         retention-days: 30
